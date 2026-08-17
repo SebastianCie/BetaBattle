@@ -206,6 +206,7 @@ export function App() {
   const [dynamicPerPage, setDynamicPerPage] = useState(calcDynamicPerPage)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pageIdxRef = useRef(0)
+  const hasDataRef = useRef(false)
 
   // Load settings
   useEffect(() => {
@@ -217,12 +218,24 @@ export function App() {
     }).catch(() => {})
   }, [])
 
-  // Load scoreboard data
+  // Load scoreboard data. Once a board has loaded successfully, a single failed
+  // poll (network blip, brief API restart, …) must not blank out the display —
+  // only show the error screen if we have never loaded anything yet.
   const load = useCallback(() => {
     if (!slug) return
     fetchScoreboard(slug, roundSlug)
-      .then(d => { setData(d); setError(null) })
-      .catch(e => setError(e.message))
+      .then(d => { hasDataRef.current = true; setData(d); setError(null) })
+      .catch(e => {
+        if (!hasDataRef.current) setError(e.message)
+        else console.warn('Scoreboard-Refresh fehlgeschlagen, zeige weiterhin letzten Stand:', e)
+      })
+  }, [slug, roundSlug])
+
+  // Reset stale state when navigating to a different competition/round
+  useEffect(() => {
+    hasDataRef.current = false
+    setData(null)
+    setError(null)
   }, [slug, roundSlug])
 
   useEffect(() => { load() }, [load])
@@ -266,7 +279,7 @@ export function App() {
   // ── Render states ─────────────────────────────────────────────────────────
 
   if (error) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12, background: DARK }}>
       <div style={{ fontSize: 48 }}>⚠</div>
       <div style={{ color: '#ff5d6b', fontSize: 18 }}>{error}</div>
       <button onClick={load} style={{ marginTop: 8, padding: '8px 20px', background: 'rgba(108,240,194,0.1)', border: '1px solid rgba(108,240,194,0.3)', color: ACCENT, borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
@@ -276,13 +289,13 @@ export function App() {
   )
 
   if (!data) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#a6b0c3', fontSize: 18 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#a6b0c3', fontSize: 18, background: DARK }}>
       Lädt…
     </div>
   )
 
   if (pages.length === 0) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12, background: DARK }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: ACCENT }}>{data.competition.name}</div>
       <div style={{ fontSize: 24, color: '#a6b0c3' }}>Noch keine bestätigten Anmeldungen</div>
     </div>
@@ -294,7 +307,7 @@ export function App() {
   const currentGlobalPage = Math.min(pageIdx, pages.length - 1) + 1
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: DARK }}>
 
       {/* Top bar */}
       <div style={{

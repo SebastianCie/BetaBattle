@@ -1,5 +1,3 @@
-export const DEV_MODE = import.meta.env.DEV
-
 let _accessToken: string | null = null
 
 export function getAccessToken(): string | null {

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type CompetitionCategory, type Route, type Registration, type RegistrationWithAthlete, type Athlete, type ScoringConfig, type CompetitionRound, type AdvancementPreview, type AdvancementAthlete, type RoundCategoryStatus } from '@/api/client'
+import { api, type CompetitionCategory, type Route, type Registration, type RegistrationWithAthlete, type Athlete, type ScoringConfig, type CompetitionRound, type AdvancementPreview, type AdvancementAthlete, type RoundCategoryStatus, type RoundParticipant } from '@/api/client'
 import {
   Card, SectionLabel, Field, Input, Select, PrimaryButton, GhostButton, DangerButton, Modal, StatusBadge
 } from '@/components/FormUI'
@@ -258,11 +258,14 @@ function AdvancementModal({ round, preview, categories, onClose, onConfirm, isPe
   )
 }
 
-function RoundsSection({ compId, categories }: { compId: string; categories: CompetitionCategory[] }) {
+function RoundsSection({ compId, categories, registrations }: {
+  compId: string; categories: CompetitionCategory[]; registrations: RegistrationWithAthlete[]
+}) {
   const qc = useQueryClient()
   const [roundModal, setRoundModal] = useState<{ mode: 'new' | 'edit'; round?: CompetitionRound } | null>(null)
   const [roundForm, setRoundForm] = useState<RoundForm>(emptyRoundForm())
   const [closeTarget, setCloseTarget] = useState<{ round: CompetitionRound; preview: AdvancementPreview } | null>(null)
+  const [participantsTarget, setParticipantsTarget] = useState<CompetitionRound | null>(null)
   const [previewLoading, setPreviewLoading] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
@@ -409,6 +412,9 @@ function RoundsSection({ compId, categories }: { compId: string; categories: Com
                     {previewLoading === round.id ? '…' : 'Runde abschließen'}
                   </PrimaryButton>
                 )}
+                <GhostButton onClick={() => setParticipantsTarget(round)} style={{ fontSize: 12, padding: '4px 10px' }}>
+                  Teilnehmer
+                </GhostButton>
                 <GhostButton onClick={() => { setRoundForm(roundToForm(round)); setRoundModal({ mode: 'edit', round }) }} style={{ fontSize: 12, padding: '4px 10px' }}>
                   Bearbeiten
                 </GhostButton>
@@ -495,15 +501,97 @@ function RoundsSection({ compId, categories }: { compId: string; categories: Com
           isPending={closeRound.isPending}
         />
       )}
+
+      {participantsTarget && (
+        <ParticipantsModal
+          round={participantsTarget}
+          registrations={registrations}
+          onClose={() => setParticipantsTarget(null)}
+        />
+      )}
     </Card>
+  )
+}
+
+function ParticipantsModal({ round, registrations, onClose }: {
+  round: CompetitionRound; registrations: RegistrationWithAthlete[]; onClose: () => void
+}) {
+  const qc = useQueryClient()
+  const queryKey = ['round-participants', round.id]
+
+  const { data: participants = [], isLoading } = useQuery({
+    queryKey,
+    queryFn: () => api.rounds.participants(round.id),
+  })
+  const participantRegIds = new Set((participants as RoundParticipant[]).map(p => p.registrationId))
+
+  const addParticipant = useMutation({
+    mutationFn: (registrationId: string) => api.rounds.addParticipant(round.id, registrationId),
+    onSuccess: () => qc.invalidateQueries({ queryKey }),
+  })
+  const removeParticipant = useMutation({
+    mutationFn: (registrationId: string) => api.rounds.removeParticipant(round.id, registrationId),
+    onSuccess: () => qc.invalidateQueries({ queryKey }),
+  })
+
+  const confirmed = registrations.filter(rwa => rwa.registration.status === 'CONFIRMED')
+  const pending = addParticipant.isPending || removeParticipant.isPending
+
+  return (
+    <Modal title={`Teilnehmer: ${round.name}`} onClose={onClose}>
+      <p style={{ fontSize: 13, color: '#a6b0c3', margin: '0 0 16px' }}>
+        Bestätigte Anmeldungen auswählen, die in dieser Runde antreten. Nur zugewiesene Athleten erscheinen im Scoreboard dieser Runde.
+      </p>
+      {isLoading ? (
+        <p style={{ color: '#a6b0c3', fontSize: 13 }}>Lädt…</p>
+      ) : confirmed.length === 0 ? (
+        <p style={{ color: '#a6b0c3', fontSize: 13, margin: 0 }}>
+          Noch keine bestätigten Anmeldungen für diesen Wettkampf.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 360, overflowY: 'auto' }}>
+          {confirmed.map(rwa => {
+            const reg = rwa.registration
+            const checked = participantRegIds.has(reg.id)
+            return (
+              <label
+                key={reg.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 8, cursor: pending ? 'default' : 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={pending}
+                  onChange={() => (checked ? removeParticipant : addParticipant).mutate(reg.id)}
+                />
+                <span style={{ flex: 1, fontSize: 13, color: '#e8ecf3' }}>
+                  {rwa.athlete ? `${rwa.athlete.firstName} ${rwa.athlete.lastName}` : '— unbekannter Athlet —'}
+                </span>
+                {reg.startNumber && (
+                  <span style={{ fontSize: 12, color: '#6b7890' }}>#{reg.startNumber}</span>
+                )}
+              </label>
+            )
+          })}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+        <PrimaryButton onClick={onClose}>Fertig</PrimaryButton>
+      </div>
+    </Modal>
   )
 }
 
 function ScoreboardUrlSection({ slug, baseUrl }: { slug: string; baseUrl: string }) {
   const [copied, setCopied] = useState(false)
-  const url = `${baseUrl || window.location.origin}/${slug}`
+  const url = baseUrl ? `${baseUrl}/${slug}` : null
 
   function copy() {
+    if (!url) return
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -512,25 +600,49 @@ function ScoreboardUrlSection({ slug, baseUrl }: { slug: string; baseUrl: string
   return (
     <Card style={{ marginTop: 24 }}>
       <SectionLabel>Scoreboard</SectionLabel>
-      <p style={{ fontSize: 13, color: '#a6b0c3', margin: '12px 0' }}>
-        Diesen Link auf dem Beamer oder einem Display in der Halle öffnen. Das Scoreboard aktualisiert sich automatisch.
-      </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <code style={{
-          background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#6cf0c2',
-          letterSpacing: '0.03em', wordBreak: 'break-all',
-        }}>
-          {url}
-        </code>
-        <GhostButton onClick={copy} style={{ whiteSpace: 'nowrap' }}>
-          {copied ? '✓ Kopiert' : 'Link kopieren'}
-        </GhostButton>
-        <GhostButton onClick={() => window.open(url, '_blank')} style={{ whiteSpace: 'nowrap' }}>
-          Öffnen ↗
-        </GhostButton>
-      </div>
+      {!url ? (
+        <MissingBaseUrlNotice
+          text="Scoreboard-URL ist nicht konfiguriert. In den Einstellungen hinterlegen, bevor der Link geteilt wird."
+        />
+      ) : (
+        <>
+          <p style={{ fontSize: 13, color: '#a6b0c3', margin: '12px 0' }}>
+            Diesen Link auf dem Beamer oder einem Display in der Halle öffnen. Das Scoreboard aktualisiert sich automatisch.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <code style={{
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#6cf0c2',
+              letterSpacing: '0.03em', wordBreak: 'break-all',
+            }}>
+              {url}
+            </code>
+            <GhostButton onClick={copy} style={{ whiteSpace: 'nowrap' }}>
+              {copied ? '✓ Kopiert' : 'Link kopieren'}
+            </GhostButton>
+            <GhostButton onClick={() => window.open(url, '_blank')} style={{ whiteSpace: 'nowrap' }}>
+              Öffnen ↗
+            </GhostButton>
+          </div>
+        </>
+      )}
     </Card>
+  )
+}
+
+function MissingBaseUrlNotice({ text }: { text: string }) {
+  return (
+    <div style={{
+      background: 'rgba(255,196,0,0.08)', border: '1px solid rgba(255,196,0,0.25)',
+      borderRadius: 10, padding: '14px 16px', marginTop: 12,
+      display: 'flex', alignItems: 'center', gap: 10,
+    }}>
+      <span style={{ fontSize: 18 }}>⚠️</span>
+      <p style={{ fontSize: 13, color: '#e8ecf3', margin: 0 }}>
+        {text}{' '}
+        <Link to="/admin/einstellungen" style={{ color: '#6cf0c2', fontWeight: 600 }}>Zu den Einstellungen →</Link>
+      </p>
+    </div>
   )
 }
 
@@ -809,7 +921,7 @@ function TokenSection({
     onSuccess: onGenerated,
   })
 
-  const registerUrl = token ? `${registerBaseUrl || window.location.origin}/${token}` : null
+  const registerUrl = token && registerBaseUrl ? `${registerBaseUrl}/${token}` : null
 
   function copy() {
     if (!registerUrl) return
@@ -861,20 +973,27 @@ function TokenSection({
           <p style={{ fontSize: 13, color: '#a6b0c3', margin: '0 0 12px' }}>
             Diesen Link als QR-Code ausdrucken und in der Halle aufhängen. Athleten können sich direkt anmelden.
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <code style={{
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#6cf0c2',
-              letterSpacing: '0.03em', wordBreak: 'break-all',
-            }}>
-              {registerUrl}
-            </code>
-            <GhostButton onClick={copy} style={{ whiteSpace: 'nowrap' }}>
-              {copied ? '✓ Kopiert' : 'Link kopieren'}
-            </GhostButton>
-            <GhostButton onClick={() => window.open(registerUrl!, '_blank')} style={{ whiteSpace: 'nowrap' }}>
-              Öffnen ↗
-            </GhostButton>
+          {!registerUrl && (
+            <MissingBaseUrlNotice text="Registrierungs-URL ist nicht konfiguriert. In den Einstellungen hinterlegen, bevor der Link geteilt wird." />
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: registerUrl ? 0 : 12 }}>
+            {registerUrl && (
+              <>
+                <code style={{
+                  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#6cf0c2',
+                  letterSpacing: '0.03em', wordBreak: 'break-all',
+                }}>
+                  {registerUrl}
+                </code>
+                <GhostButton onClick={copy} style={{ whiteSpace: 'nowrap' }}>
+                  {copied ? '✓ Kopiert' : 'Link kopieren'}
+                </GhostButton>
+                <GhostButton onClick={() => window.open(registerUrl!, '_blank')} style={{ whiteSpace: 'nowrap' }}>
+                  Öffnen ↗
+                </GhostButton>
+              </>
+            )}
             <GhostButton
               onClick={() => { if (confirm('Neuen Token generieren? Der alte Link wird ungültig.')) generateToken.mutate() }}
               style={{ fontSize: 12, padding: '6px 12px', color: '#a6b0c3' }}
@@ -1196,7 +1315,7 @@ export function CompetitionDetail() {
     <div style={{ maxWidth: 960 }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <button onClick={() => navigate('/dashboard/wettkampfe')}
+        <button onClick={() => navigate('/admin/wettkampfe')}
           style={{ background: 'none', border: 'none', color: '#6cf0c2', cursor: 'pointer', fontSize: 13, padding: 0, marginBottom: 12 }}>
           ← Zurück zur Übersicht
         </button>
@@ -1256,7 +1375,7 @@ export function CompetitionDetail() {
       </Card>
 
       {/* Rounds */}
-      <RoundsSection compId={id!} categories={categories as CompetitionCategory[]} />
+      <RoundsSection compId={id!} categories={categories as CompetitionCategory[]} registrations={registrations as RegistrationWithAthlete[]} />
 
       {/* Routes */}
       <Card>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { DEV_MODE, parseJwtClaims, refreshAccessToken, setAccessToken } from './auth'
+import { parseJwtClaims, refreshAccessToken, setAccessToken } from './auth'
 
 type AuthState =
   | { status: 'loading' }
@@ -27,12 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    if (DEV_MODE) {
-      localStorage.setItem('bb_org_setup_done', '1')
-      setAuth({ status: 'authenticated', token: '', userId: '00000000-0000-0000-0000-000000000001', name: 'Dev User' })
-      return
-    }
-
     refreshAccessToken().then(token => {
       if (!token) { setAuth({ status: 'unauthenticated' }); return }
       setAuth(stateFromToken(token))

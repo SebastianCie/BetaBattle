@@ -188,7 +188,6 @@ export function Modal({ title, onClose, children }: {
         background: 'rgba(2,2,49,0.85)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
         background: '#0d1526', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20,

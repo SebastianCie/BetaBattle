@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/auth/AuthProvider'
-import { DEV_MODE } from '@/auth/auth'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Login } from '@/pages/Login'
 import { Register } from '@/pages/Register'
@@ -20,9 +19,7 @@ const queryClient = new QueryClient()
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const auth = useAuth()
   if (auth.status === 'loading') return null
-  if (auth.status === 'unauthenticated') {
-    if (!DEV_MODE) return <Navigate to="/login" replace />
-  }
+  if (auth.status === 'unauthenticated') return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
@@ -30,7 +27,7 @@ function SmartRedirect() {
   const auth = useAuth()
   if (auth.status === 'loading') return null
   if (auth.status === 'unauthenticated') return <Navigate to="/login" replace />
-  return <Navigate to={localStorage.getItem('bb_org_setup_done') ? '/dashboard' : '/setup'} replace />
+  return <Navigate to={localStorage.getItem('bb_org_setup_done') ? '/admin' : '/setup'} replace />
 }
 
 export default function App() {
@@ -43,7 +40,7 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/setup" element={<ProtectedRoute><SetupOrganization /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/admin" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route index element={<DashboardHome />} />
               <Route path="organisation" element={<OrganisationSettings />} />
               <Route path="wettkampfe" element={<Competitions />} />

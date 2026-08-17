@@ -23,6 +23,9 @@ public class AuthResource {
     @ConfigProperty(name = "beta-battle.cookie.secure", defaultValue = "true")
     boolean cookieSecure;
 
+    @ConfigProperty(name = "beta-battle.require-email-verification", defaultValue = "true")
+    boolean requireEmailVerification;
+
     private static final String REFRESH_COOKIE  = "refresh_token";
     private static final int    COOKIE_MAX_AGE  = 30 * 24 * 60 * 60; // 30 Tage in Sekunden
     private static final int    ACCESS_LIFETIME = 900;               // 15 Minuten in Sekunden
@@ -42,8 +45,11 @@ public class AuthResource {
     @Path("/register")
     public Response register(RegisterRequest req) {
         authService.register(req.email(), req.password(), req.displayName());
+        String message = requireEmailVerification
+                ? "Registration successful. Please check your email to verify your address."
+                : "Registration successful. You can now log in.";
         return Response.status(Response.Status.CREATED)
-                .entity(new MessageResponse("Registration successful. Please check your email to verify your address."))
+                .entity(new MessageResponse(message))
                 .build();
     }
 

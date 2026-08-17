@@ -168,7 +168,7 @@ export function Competitions() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <PrimaryButton onClick={() => navigate(`/dashboard/wettkampfe/${comp.id}`)}>Verwalten</PrimaryButton>
+                <PrimaryButton onClick={() => navigate(`/admin/wettkampfe/${comp.id}`)}>Verwalten</PrimaryButton>
                 <GhostButton onClick={() => openEdit(comp)}>Bearbeiten</GhostButton>
                 <DangerButton onClick={() => { if (confirm(`"${comp.name}" wirklich löschen?`)) remove.mutate(comp.id) }}>
                   Löschen

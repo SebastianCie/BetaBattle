@@ -32,6 +32,9 @@ public class AuthService {
     @ConfigProperty(name = "beta-battle.frontend-url", defaultValue = "http://localhost:5173")
     String frontendUrl;
 
+    @ConfigProperty(name = "beta-battle.require-email-verification", defaultValue = "true")
+    boolean requireEmailVerification;
+
     public record TokenPair(String accessToken, String refreshToken) {}
 
     @Transactional
@@ -53,8 +56,10 @@ public class AuthService {
         user.passwordHash = passwordService.hash(password);
         user.displayName = displayName;
         user.role = "ORGANIZER";
-        user.emailVerified = false;
+        user.emailVerified = !requireEmailVerification;
         user.persist();
+
+        if (!requireEmailVerification) return;
 
         String token = UUID.randomUUID().toString();
         EmailVerification ev = new EmailVerification();

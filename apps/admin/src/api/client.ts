@@ -1,9 +1,8 @@
-import { DEV_MODE, getAccessToken } from '@/auth/auth'
+import { getAccessToken } from '@/auth/auth'
 
 const BASE = '/api/v1'
 
 function authHeader(): Record<string, string> {
-  if (DEV_MODE) return {}
   const token = getAccessToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
@@ -147,6 +146,12 @@ export type RoundCategoryStatus = {
   roundId: string
   categoryId: string
   status: string
+}
+
+export type RoundParticipant = {
+  id: string
+  roundId: string
+  registrationId: string
 }
 
 export type Registration = {
@@ -294,6 +299,12 @@ export const api = {
       request<AdvancementPreview>(`/rounds/${id}/advancement-preview${categoryId ? `?categoryId=${categoryId}` : ''}`),
     close: (id: string, categoryId: string | null, advancedRegistrationIds: string[]) =>
       request<unknown>(`/rounds/${id}/close`, { method: 'POST', body: JSON.stringify({ categoryId, advancedRegistrationIds }) }),
+    participants: (id: string) =>
+      request<RoundParticipant[]>(`/rounds/${id}/participants`),
+    addParticipant: (id: string, registrationId: string) =>
+      request<RoundParticipant>(`/rounds/${id}/participants`, { method: 'POST', body: JSON.stringify({ registrationId }) }),
+    removeParticipant: (id: string, registrationId: string) =>
+      request<void>(`/rounds/${id}/participants/${registrationId}`, { method: 'DELETE' }),
   },
 
   registrations: {

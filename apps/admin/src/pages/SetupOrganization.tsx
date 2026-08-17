@@ -27,7 +27,7 @@ export function SetupOrganization() {
       name: data.orgName, slug: data.slug, contactEmail: data.email || null, logoUrl: data.logoUrl || null,
       locationName: data.locationName, locationCity: data.city || null, locationAddress: data.address || null,
     }),
-    onSuccess: () => { localStorage.setItem('bb_org_setup_done', '1'); navigate('/dashboard') },
+    onSuccess: () => { localStorage.setItem('bb_org_setup_done', '1'); navigate('/admin') },
   })
 
   function set(field: keyof FormData, value: string) {

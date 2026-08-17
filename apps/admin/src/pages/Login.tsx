@@ -29,7 +29,7 @@ export function Login() {
     try {
       await doLogin(form.email, form.password)
       // Reload → AuthProvider liest Refresh-Cookie und setzt authenticated state
-      window.location.href = localStorage.getItem('bb_org_setup_done') ? '/dashboard' : '/setup'
+      window.location.href = localStorage.getItem('bb_org_setup_done') ? '/admin' : '/setup'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login fehlgeschlagen')
     } finally {

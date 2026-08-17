@@ -47,3 +47,9 @@ node_modules
 node_modules/
 dist/
 .turbo/
+
+# SSH keys / secrets — never commit
+*.pem
+*.key
+!api/src/main/resources/keys/*.pem
+ssh-key-*

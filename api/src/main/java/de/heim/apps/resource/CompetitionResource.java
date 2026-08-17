@@ -98,7 +98,7 @@ public class CompetitionResource {
         if (comp == null) return Response.status(404).build();
         UUID userId = UUID.fromString(identity.getPrincipal().getName());
 
-        // Primary: find athlete by Keycloak userId
+        // Primary: find athlete by authenticated userId
         Athlete athlete = Athlete.find("userId", userId).firstResult();
         Registration reg = null;
 
@@ -117,7 +117,7 @@ public class CompetitionResource {
                     if (candidate != null && candidate.userId == null
                             && givenName.equalsIgnoreCase(candidate.firstName)
                             && familyName.equalsIgnoreCase(candidate.lastName)) {
-                        // Link this athlete to the Keycloak user for future lookups
+                        // Link this athlete to the authenticated user for future lookups
                         candidate.userId = userId;
                         athlete = candidate;
                         reg = r;

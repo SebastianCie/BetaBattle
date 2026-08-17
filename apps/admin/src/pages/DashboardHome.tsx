@@ -32,9 +32,9 @@ export function DashboardHome() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
         {[
-          { label: 'Standorte', value: locations?.length ?? '—', to: '/dashboard/organisation' },
-          { label: 'Wettkämpfe gesamt', value: competitions?.length ?? '—', to: '/dashboard/wettkampfe' },
-          { label: 'Aktive Wettkämpfe', value: activeComps, to: '/dashboard/wettkampfe' },
+          { label: 'Standorte', value: locations?.length ?? '—', to: '/admin/organisation' },
+          { label: 'Wettkämpfe gesamt', value: competitions?.length ?? '—', to: '/admin/wettkampfe' },
+          { label: 'Aktive Wettkämpfe', value: activeComps, to: '/admin/wettkampfe' },
         ].map(({ label, value, to }) => (
           <Link key={label} to={to} style={{ textDecoration: 'none' }}>
             <div style={{
@@ -57,9 +57,9 @@ export function DashboardHome() {
         <div style={{ fontSize: 13, fontWeight: 600, color: '#e8ecf3', marginBottom: 16 }}>Schnellzugriff</div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {[
-            { label: '+ Neuer Wettkampf', to: '/dashboard/wettkampfe' },
-            { label: 'Organisation bearbeiten', to: '/dashboard/organisation' },
-            { label: 'Standorte verwalten', to: '/dashboard/organisation' },
+            { label: '+ Neuer Wettkampf', to: '/admin/wettkampfe' },
+            { label: 'Organisation bearbeiten', to: '/admin/organisation' },
+            { label: 'Standorte verwalten', to: '/admin/organisation' },
           ].map(({ label, to }) => (
             <Link key={label} to={to} style={{
               display: 'inline-block', textDecoration: 'none',

@@ -4,12 +4,12 @@ import { doLogout } from '@/auth/auth'
 import { BetaBattleLogo } from './FormUI'
 
 const NAV: { to: string; label: string; end?: boolean }[] = [
-  { to: '/dashboard', label: 'Übersicht', end: true },
-  { to: '/dashboard/organisation', label: 'Organisation & Standorte' },
-  { to: '/dashboard/wettkampfe', label: 'Wettkämpfe' },
-  { to: '/dashboard/athleten', label: 'Athleten' },
-  { to: '/dashboard/einstellungen', label: 'Einstellungen' },
-  { to: '/dashboard/hilfe', label: 'Hilfe & FAQ' },
+  { to: '/admin', label: 'Übersicht', end: true },
+  { to: '/admin/organisation', label: 'Organisation & Standorte' },
+  { to: '/admin/wettkampfe', label: 'Wettkämpfe' },
+  { to: '/admin/athleten', label: 'Athleten' },
+  { to: '/admin/einstellungen', label: 'Einstellungen' },
+  { to: '/admin/hilfe', label: 'Hilfe & FAQ' },
 ]
 
 export function DashboardLayout() {
